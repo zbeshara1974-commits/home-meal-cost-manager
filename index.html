@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#315c4b">
+<title>مدير تكلفة الوجبات | Home Meal Cost Manager</title>
+<style>
+:root{--green:#315c4b;--pale:#edf4ef;--ink:#1e2b24;--muted:#68776e;--line:#dce6df;--white:#fff;--red:#b74444}
+*{box-sizing:border-box}body{margin:0;background:#f5f7f5;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+header{background:var(--green);color:white;padding:18px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}header p{margin:4px 0 0;color:#e2eee6;font-size:13px}
+button,.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--green);color:white;font-weight:650;cursor:pointer;font-size:14px}
+button.secondary{background:var(--pale);color:var(--green);border:1px solid var(--line)}button.danger{background:#fff0f0;color:var(--red);border:1px solid #f0cccc}
+main{max-width:1100px;margin:18px auto;padding:0 14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.tabs button.active{background:#1d382c}
+.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:15px;box-shadow:0 3px 14px #173d2810}
+h2{font-size:18px;margin:0 0 14px}h3{font-size:15px;margin:14px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:11px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+input,select,textarea{width:100%;border:1px solid #ccd9d0;border-radius:9px;padding:10px;background:white;color:var(--ink);font:inherit;min-width:0}
+input:focus,select:focus{outline:2px solid #b8d4c1;border-color:var(--green)}
+.field{min-width:0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:15px}
+.stat{background:var(--pale);padding:14px;border-radius:13px}.stat small{color:var(--muted)}.stat strong{display:block;font-size:22px;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:start}th{color:var(--muted);font-weight:650}
+.tablewrap{overflow-x:auto}.empty{color:var(--muted);text-align:center;padding:22px}
+.recipe-line{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end;margin:8px 0}
+.result{background:#f0f6f1;border:1px solid var(--line);padding:13px;border-radius:12px}
+.result strong{font-size:19px}.muted{color:var(--muted);font-size:12px}
+.hidden{display:none!important}
+@media(max-width:560px){header{align-items:flex-start}.recipe-line{grid-template-columns:1fr 1fr}.recipe-line .ingredient-select{grid-column:1/-1}.recipe-line button{grid-column:2}main{padding:0 10px}.panel{padding:13px}}
+</style>
+</head>
+<body>
+<header><div><h1 id="appTitle">مدير تكلفة الوجبات المنزلية</h1><p id="subTitle">احسب تكلفة كل وصفة وسعر البيع والربح — USD</p></div><button class="secondary" id="langBtn" style="background:white">English</button></header>
+<main>
+<div class="tabs">
+<button class="active" data-tab="dashboard" id="tabDashboard">الرئيسية</button>
+<button class="secondary" data-tab="ingredients" id="tabIngredients">المكونات</button>
+<button class="secondary" data-tab="recipes" id="tabRecipes">الوصفات</button>
+<button class="secondary" data-tab="backup" id="tabBackup">نسخ احتياطي</button>
+</div>
+<section id="dashboard" class="view">
+<div class="cards">
+<div class="stat"><small id="statRecipes">عدد الوصفات</small><strong id="recipeCount">0</strong></div>
+<div class="stat"><small id="statIngredients">عدد المكونات</small><strong id="ingredientCount">0</strong></div>
+<div class="stat"><small id="statCurrency">العملة</small><strong>USD $</strong></div>
+</div>
+<div class="panel"><h2 id="quickTitle">ابدأ من هنا</h2><p id="quickText">أضف المكونات وأسعار شرائها أولاً، ثم أنشئ وصفاتك وسيحسب البرنامج التكلفة تلقائياً.</p><div class="actions"><button onclick="showTab('ingredients')" id="addIngQuick">إضافة مكون</button><button class="secondary" onclick="showTab('recipes')" id="addRecQuick">إنشاء وصفة</button></div></div>
+<div class="panel"><h2 id="recentTitle">الوصفات المحفوظة</h2><div id="dashboardRecipes"></div></div>
+</section>
+<section id="ingredients" class="view hidden">
+<div class="panel"><h2 id="ingredientFormTitle">إضافة مكون جديد</h2>
+<input type="hidden" id="ingredientId">
+<div class="grid">
+<div class="field"><label id="lblIngName">اسم المكون</label><input id="ingName" placeholder="مثال: أرز"></div>
+<div class="field"><label id="lblCategory">التصنيف</label><select id="ingCategory"></select></div>
+<div class="field"><label id="lblBuyQty">كمية العبوة المشتراة</label><input id="buyQty" type="number" min="0.001" step="any" placeholder="1000"></div>
+<div class="field"><label id="lblUnit">وحدة العبوة</label><select id="buyUnit"><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="L">L</option><option value="piece">piece</option></select></div>
+<div class="field"><label id="lblPrice">سعر شراء العبوة ($)</label><input id="buyPrice" type="number" min="0" step="0.01" placeholder="5.00"></div>
+</div><div class="actions"><button id="saveIngredient">حفظ المكون</button><button class="secondary" id="clearIngredient">تفريغ</button></div>
+</div>
+<div class="panel"><h2 id="ingredientsListTitle">قائمة المكونات</h2><div id="ingredientsTable"></div></div>
+</section>
+<section id="recipes" class="view hidden">
+<div class="panel"><h2 id="recipeFormTitle">إنشاء وصفة</h2><input type="hidden" id="recipeId">
+<div class="grid">
+<div class="field"><label id="lblRecipeName">اسم الوصفة</label><input id="recipeName" placeholder="مثال: مكرونة بالبشاميل"></div>
+<div class="field"><label id="lblServings">عدد الحصص</label><input id="servings" type="number" min="1" step="1" value="4"></div>
+<div class="field"><label id="lblMargin">هامش الربح المستهدف (%)</label><input id="margin" type="number" min="0" max="95" step="1" value="30"></div>
+</div>
+<h3 id="lblRecipeIngredients">مكونات الوصفة</h3><div id="recipeLines"></div>
+<div class="actions"><button class="secondary" id="addLine">+ <span id="addLineText">إضافة مكون للوصفة</span></button></div>
+<h3 id="lblOverheads">المصاريف الإضافية للدفعة ($)</h3>
+<div class="grid">
+<div class="field"><label id="lblGas">غاز</label><input id="gas" type="number" min="0" step=".01" value="0"></div>
+<div class="field"><label id="lblElectric">كهرباء</label><input id="electric" type="number" min="0" step=".01" value="0"></div>
+<div class="field"><label id="lblPackaging">تغليف</label><input id="packaging" type="number" min="0" step=".01" value="0"></div>
+<div class="field"><label id="lblDelivery">توصيل</label><input id="delivery" type="number" min="0" step=".01" value="0"></div>
+<div class="field"><label id="lblOther">أخرى</label><input id="otherCost" type="number" min="0" step=".01" value="0"></div>
+</div>
+<div class="result" style="margin-top:14px"><div id="costSummary">تكلفة المكونات: $0.00</div><div id="totalCostSummary">إجمالي تكلفة الدفعة: $0.00</div><div id="perServingSummary">تكلفة الحصة: $0.00</div><div id="suggestedSummary">سعر البيع المقترح للحصة (هامش ربح): $0.00</div><strong id="profitSummary">الربح المتوقع للدفعة: $0.00</strong><p class="muted" id="marginHint">هامش الربح محسوب من سعر البيع، وليس زيادة على التكلفة.</p></div>
+<div class="actions"><button id="saveRecipe">حفظ الوصفة</button><button class="secondary" id="clearRecipe">تفريغ</button></div>
+</div>
+<div class="panel"><h2 id="recipesListTitle">قائمة الوصفات</h2><div id="recipesTable"></div></div>
+</section>
+<section id="backup" class="view hidden">
+<div class="panel"><h2 id="backupTitle">النسخ الاحتياطي</h2><p id="backupText">بياناتك محفوظة في هذا المتصفح على هذا الجهاز. نزّل نسخة احتياطية لنقلها أو الاحتفاظ بها.</p><div class="actions"><button id="exportBtn">تصدير نسخة JSON</button><label class="btn secondary" style="display:inline-flex;align-items:center;gap:8px"><span id="importText">استيراد نسخة</span><input type="file" id="importFile" accept=".json,application/json" style="display:none"></label></div><p class="muted" id="backupNote">هذه النسخة المجانية تحفظ محلياً على الجهاز الحالي؛ لا تتم المزامنة التلقائية بين الأجهزة.</p></div>
+</section>
+</main>
+<script>
+const categories=[
+['vegetables','خضروات','Vegetables'],['fruits','فواكه','Fruits'],['meat','لحوم ودواجن','Meat & poultry'],['seafood','مأكولات بحرية','Seafood'],['legumes','بقوليات','Legumes'],['grains','حبوب وأرز','Grains & rice'],['oils','زيوت','Oils'],['butter','زبدة وسمن','Butter & ghee'],['dairy','منتجات ألبان','Dairy'],['spices','توابل وأعشاب','Spices & herbs'],['sauces','صلصات وتوابل','Sauces & condiments'],['other','مكونات أخرى','Other ingredients']];
+const T={
+ar:{tabs:['الرئيسية','المكونات','الوصفات','نسخ احتياطي'],ing:'المكونات',rec:'الوصفات',save:'حفظ',edit:'تعديل',del:'حذف',name:'الاسم',category:'التصنيف',qty:'كمية العبوة',unit:'الوحدة',price:'سعر العبوة ($)',actions:'إجراءات',none:'لا توجد بيانات بعد.',recipe:'الوصفة',servings:'الحصص',cost:'التكلفة',per:'تكلفة الحصة',suggest:'سعر البيع/حصة',profit:'الربح المتوقع',confirm:'هل تريد الحذف؟',choose:'اختر مكوناً',used:'الكمية المستخدمة',addLine:'إضافة مكون للوصفة',err:'أكمل البيانات المطلوبة بشكل صحيح.',saved:'تم الحفظ بنجاح.',titleIng:'إضافة مكون جديد',titleRec:'إنشاء وصفة',ingredient:'مكون',gas:'غاز',electric:'كهرباء',packaging:'تغليف',delivery:'توصيل',other:'أخرى',margin:'هامش الربح المستهدف (%)',backup:'نسخ احتياطي',total:'إجمالي تكلفة الدفعة',subtotal:'تكلفة المكونات',overheads:'المصاريف الإضافية',costServing:'تكلفة الحصة',suggested:'سعر البيع المقترح للحصة (هامش ربح)',profitBatch:'الربح المتوقع للدفعة',hint:'هامش الربح محسوب من سعر البيع، وليس زيادة على التكلفة.'},
+en:{tabs:['Dashboard','Ingredients','Recipes','Backup'],ing:'Ingredients',rec:'Recipes',save:'Save',edit:'Edit',del:'Delete',name:'Name',category:'Category',qty:'Package quantity',unit:'Unit',price:'Package price ($)',actions:'Actions',none:'No data yet.',recipe:'Recipe',servings:'Servings',cost:'Cost',per:'Cost / serving',suggest:'Sell / serving',profit:'Expected profit',confirm:'Delete this item?',choose:'Choose ingredient',used:'Quantity used',addLine:'Add ingredient',err:'Please complete the required fields.',saved:'Saved successfully.',titleIng:'Add new ingredient',titleRec:'Create recipe',ingredient:'Ingredient',gas:'Gas',electric:'Electricity',packaging:'Packaging',delivery:'Delivery',other:'Other',margin:'Target profit margin (%)',backup:'Backup',total:'Batch total cost',subtotal:'Ingredient subtotal',overheads:'Overheads',costServing:'Cost per serving',suggested:'Suggested selling price / serving (margin)',profitBatch:'Expected batch profit',hint:'Profit margin is calculated from the selling price, not as a markup.'}
+};
+let lang='ar',ingredients=[],recipes=[],lineSeq=0;
+const $=id=>document.getElementById(id), money=n=>'$'+(Number(n)||0).toFixed(2), num=id=>Number($(id).value)||0;
+function load(){try{ingredients=JSON.parse(localStorage.getItem('hmcm_ing')||'[]');recipes=JSON.parse(localStorage.getItem('hmcm_rec')||'[]')}catch(e){ingredients=[];recipes=[]}}
+function persist(){localStorage.setItem('hmcm_ing',JSON.stringify(ingredients));localStorage.setItem('hmcm_rec',JSON.stringify(recipes));renderAll()}
+function tr(key){return T[lang][key]||key}
+function showTab(id){document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===id);b.classList.toggle('secondary',b.dataset.tab!==id)})}
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function setLanguage(){document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';$('langBtn').textContent=lang==='ar'?'English':'العربية';let ids={tabDashboard:0,tabIngredients:1,tabRecipes:2,tabBackup:3};Object.entries(ids).forEach(([id,i])=>$(id).textContent=T[lang].tabs[i]);$('appTitle').textContent=lang==='ar'?'مدير تكلفة الوجبات المنزلية':'Home Meal Cost Manager';$('subTitle').textContent=lang==='ar'?'احسب تكلفة كل وصفة وسعر البيع والربح — USD':'Calculate recipe costs, selling price and profit — USD';
+const map={statRecipes:lang==='ar'?'عدد الوصفات':'Recipes',statIngredients:lang==='ar'?'عدد المكونات':'Ingredients',statCurrency:lang==='ar'?'العملة':'Currency',quickTitle:lang==='ar'?'ابدأ من هنا':'Get started',quickText:lang==='ar'?'أضف المكونات وأسعار شرائها أولاً، ثم أنشئ وصفاتك وسيحسب البرنامج التكلفة تلقائياً.':'Add ingredients and purchase prices first, then create recipes and calculate costs automatically.',addIngQuick:lang==='ar'?'إضافة مكون':'Add ingredient',addRecQuick:lang==='ar'?'إنشاء وصفة':'Create recipe',recentTitle:lang==='ar'?'الوصفات المحفوظة':'Saved recipes',ingredientFormTitle:tr('titleIng'),lblIngName:tr('name'),lblCategory:tr('category'),lblBuyQty:tr('qty'),lblUnit:tr('unit'),lblPrice:tr('price'),saveIngredient:tr('save'),clearIngredient:lang==='ar'?'تفريغ':'Clear',ingredientsListTitle:lang==='ar'?'قائمة المكونات':'Ingredient list',recipeFormTitle:tr('titleRec'),lblRecipeName:lang==='ar'?'اسم الوصفة':'Recipe name',lblServings:tr('servings'),lblMargin:tr('margin'),lblRecipeIngredients:lang==='ar'?'مكونات الوصفة':'Recipe ingredients',addLineText:tr('addLine'),lblOverheads:lang==='ar'?'المصاريف الإضافية للدفعة ($)':'Batch overheads ($)',lblGas:tr('gas'),lblElectric:tr('electric'),lblPackaging:tr('packaging'),lblDelivery:tr('delivery'),lblOther:tr('other'),saveRecipe:tr('save'),clearRecipe:lang==='ar'?'تفريغ':'Clear',recipesListTitle:lang==='ar'?'قائمة الوصفات':'Recipe list',backupTitle:tr('backup'),backupText:lang==='ar'?'بياناتك محفوظة في هذا المتصفح على هذا الجهاز. نزّل نسخة احتياطية لنقلها أو الاحتفاظ بها.':'Your data is saved in this browser on this device. Export a backup to move or keep it.',exportBtn:lang==='ar'?'تصدير نسخة JSON':'Export JSON backup',importText:lang==='ar'?'استيراد نسخة':'Import backup',backupNote:lang==='ar'?'هذه النسخة المجانية تحفظ محلياً على الجهاز الحالي؛ لا تتم المزامنة التلقائية بين الأجهزة.':'This free version stores data locally on this device; automatic cross-device sync is not included.',marginHint:tr('hint')};
+Object.entries(map).forEach(([id,v])=>{if($(id))$(id).textContent=v});$('ingCategory').innerHTML=categories.map(c=>`<option value="${c[0]}">${lang==='ar'?c[1]:c[2]}</option>`).join('');renderAll();calcRecipe()}
+$('langBtn').onclick=()=>{lang=lang==='ar'?'en':'ar';setLanguage()};
+function norm(q,u){if(u==='kg')return q*1000;if(u==='L')return q*1000;return q}
+function unitBase(u){return u==='kg'?'g':u==='L'?'ml':u}
+function ingredientCost(ing,used,unit){if(unitBase(ing.unit)!==unitBase(unit))return null;if(unit==='piece'||ing.unit==='piece')return ing.unit===unit?ing.price*used/ing.qty:null;return ing.price*norm(used,unit)/norm(ing.qty,ing.unit)}
+function clearIng(){['ingredientId','ingName','buyQty','buyPrice'].forEach(id=>$(id).value='');$('buyUnit').value='g';$('ingredientFormTitle').textContent=tr('titleIng')}
+$('clearIngredient').onclick=clearIng;
+$('saveIngredient').onclick=()=>{let id=$('ingredientId').value,name=$('ingName').value.trim(),qty=num('buyQty'),price=num('buyPrice'),unit=$('buyUnit').value;if(!name||qty<=0||price<0){alert(tr('err'));return}let item={id:id||String(Date.now()),name,category:$('ingCategory').value,qty,unit,price};if(id)ingredients=ingredients.map(x=>x.id===id?item:x);else ingredients.push(item);clearIng();persist();alert(tr('saved'))};
+function editIng(id){let x=ingredients.find(a=>a.id===id);if(!x)return;$('ingredientId').value=x.id;$('ingName').value=x.name;$('ingCategory').value=x.category;$('buyQty').value=x.qty;$('buyUnit').value=x.unit;$('buyPrice').value=x.price;$('ingredientFormTitle').textContent=lang==='ar'?'تعديل مكون':'Edit ingredient';showTab('ingredients')}
+function delIng(id){if(!confirm(tr('confirm')))return;ingredients=ingredients.filter(x=>x.id!==id);persist()}
+function table(headers,rows){if(!rows.length)return `<div class="empty">${tr('none')}</div>`;return `<div class="tablewrap"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`}
+function renderIngredients(){$('ingredientsTable').innerHTML=table([tr('name'),tr('category'),tr('qty'),tr('price'),tr('actions')],ingredients.map(x=>`<tr><td>${esc(x.name)}</td><td>${catName(x.category)}</td><td>${x.qty} ${x.unit}</td><td>${money(x.price)}</td><td><button class="secondary" onclick="editIng('${x.id}')">${tr('edit')}</button> <button class="danger" onclick="delIng('${x.id}')">${tr('del')}</button></td></tr>`))}
+function catName(id){let c=categories.find(x=>x[0]===id);return c?(lang==='ar'?c[1]:c[2]):id}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function addLine(ingId='',qty='',unit='g'){let id=++lineSeq,opts=ingredients.map(x=>`<option value="${x.id}" ${x.id===ingId?'selected':''}>${esc(x.name)}</option>`).join('');let div=document.createElement('div');div.className='recipe-line';div.dataset.line=id;div.innerHTML=`<div class="field ingredient-select"><label>${tr('ingredient')}</label><select class="line-ing"><option value="">${tr('choose')}</option>${opts}</select></div><div class="field"><label>${tr('used')}</label><input class="line-qty" type="number" min="0" step="any" value="${qty}" placeholder="0"></div><div class="field"><label>${tr('unit')}</label><select class="line-unit">${['g','kg','ml','L','piece'].map(u=>`<option ${u===unit?'selected':''}>${u}</option>`).join('')}</select></div><button class="danger" onclick="this.parentElement.remove();calcRecipe()">×</button>`;['change','input'].forEach(ev=>div.addEventListener(ev,calcRecipe));$('recipeLines').appendChild(div);calcRecipe()}
+$('addLine').onclick=()=>addLine();
+function calcRecipe(){let sub=0,valid=true;document.querySelectorAll('.recipe-line').forEach(row=>{let ing=ingredients.find(x=>x.id===row.querySelector('.line-ing').value),q=Number(row.querySelector('.line-qty').value)||0,u=row.querySelector('.line-unit').value;if(ing&&q>0){let c=ingredientCost(ing,q,u);if(c===null){valid=false}else sub+=c}});let overhead=['gas','electric','packaging','delivery','otherCost'].reduce((a,id)=>a+num(id),0),total=sub+overhead,serv=Math.max(1,num('servings')),margin=Math.min(95,Math.max(0,num('margin')))/100,price=total/serv/(1-margin),profit=price*serv-total;$('costSummary').textContent=tr('subtotal')+': '+money(sub);$('totalCostSummary').textContent=tr('total')+': '+money(total);$('perServingSummary').textContent=tr('costServing')+': '+money(total/serv);$('suggestedSummary').textContent=tr('suggested')+': '+money(price);$('profitSummary').textContent=tr('profitBatch')+': '+money(profit);$('marginHint').textContent=tr('hint')+(valid?'':' ⚠ '+(lang==='ar'?'تأكد من توافق وحدات القياس.':'Check that measurement units match.'));return {sub,overhead,total,serv,price,profit,valid}}
+['gas','electric','packaging','delivery','otherCost','servings','margin'].forEach(id=>$(id).addEventListener('input',calcRecipe));
+function clearRecipe(){['recipeId','recipeName'].forEach(id=>$(id).value='');$('servings').value=4;$('margin').value=30;['gas','electric','packaging','delivery','otherCost'].forEach(id=>$(id).value=0);$('recipeLines').innerHTML='';$('recipeFormTitle').textContent=tr('titleRec');calcRecipe()}
+$('clearRecipe').onclick=clearRecipe;
+$('saveRecipe').onclick=()=>{let id=$('recipeId').value,name=$('recipeName').value.trim(),serv=num('servings'),calc=calcRecipe(),lines=[...document.querySelectorAll('.recipe-line')].map(r=>({ingredientId:r.querySelector('.line-ing').value,qty:Number(r.querySelector('.line-qty').value),unit:r.querySelector('.line-unit').value})).filter(x=>x.ingredientId&&x.qty>0);if(!name||serv<1||!lines.length||!calc.valid){alert(tr('err'));return}let r={id:id||String(Date.now()),name,serv,margin:num('margin'),lines,overheads:{gas:num('gas'),electric:num('electric'),packaging:num('packaging'),delivery:num('delivery'),other:num('otherCost')},updated:new Date().toISOString()};if(id)recipes=recipes.map(x=>x.id===id?r:x);else recipes.push(r);clearRecipe();persist();alert(tr('saved'))};
+function calcSaved(r){let sub=0;for(let l of r.lines){let ing=ingredients.find(x=>x.id===l.ingredientId);if(!ing)continue;let c=ingredientCost(ing,l.qty,l.unit);if(c!==null)sub+=c}let o=Object.values(r.overheads||{}).reduce((a,b)=>a+(Number(b)||0),0),total=sub+o,price=total/Math.max(1,r.serv)/(1-Math.min(95,r.margin||0)/100);return {sub,total,per:total/Math.max(1,r.serv),price,profit:price*r.serv-total}}
+function editRecipe(id){let r=recipes.find(x=>x.id===id);if(!r)return;clearRecipe();$('recipeId').value=r.id;$('recipeName').value=r.name;$('servings').value=r.serv;$('margin').value=r.margin;for(let k of ['gas','electric','packaging','delivery'])$(k).value=r.overheads[k]||0;$('otherCost').value=r.overheads.other||0;r.lines.forEach(l=>addLine(l.ingredientId,l.qty,l.unit));$('recipeFormTitle').textContent=lang==='ar'?'تعديل وصفة':'Edit recipe';calcRecipe();showTab('recipes')}
+function delRecipe(id){if(!confirm(tr('confirm')))return;recipes=recipes.filter(x=>x.id!==id);persist()}
+function renderRecipes(){$('recipesTable').innerHTML=table([tr('recipe'),tr('servings'),tr('cost'),tr('per'),tr('suggest'),tr('actions')],recipes.map(r=>{let c=calcSaved(r);return `<tr><td>${esc(r.name)}</td><td>${r.serv}</td><td>${money(c.total)}</td><td>${money(c.per)}</td><td>${money(c.price)}</td><td><button class="secondary" onclick="editRecipe('${r.id}')">${tr('edit')}</button> <button class="danger" onclick="delRecipe('${r.id}')">${tr('del')}</button></td></tr>`}))}
+function renderAll(){renderIngredients();renderRecipes();$('recipeCount').textContent=recipes.length;$('ingredientCount').textContent=ingredients.length;$('dashboardRecipes').innerHTML=recipes.length?recipes.map(r=>{let c=calcSaved(r);return `<p><b>${esc(r.name)}</b> — ${money(c.total)} <span class="muted">(${tr('per')}: ${money(c.per)})</span></p>`}).join(''):`<div class="empty">${tr('none')}</div>`}
+$('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify({ingredients,recipes},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='home-meal-backup.json';a.click();URL.revokeObjectURL(a.href)};
+$('importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.ingredients)||!Array.isArray(d.recipes))throw Error();ingredients=d.ingredients;recipes=d.recipes;persist();alert(tr('saved'))}catch(err){alert(lang==='ar'?'ملف النسخة الاحتياطية غير صالح':'Invalid backup file')}e.target.value=''};
+load();setLanguage();showTab('dashboard');
+</script>
+</body></html>
